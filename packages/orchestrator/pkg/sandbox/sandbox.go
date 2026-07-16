@@ -270,6 +270,19 @@ type Sandbox struct {
 	// every time a new Firecracker VM is started.
 	LifecycleID string
 
+	// LifecycleStartedAt is the orchestrator's own host-clock instant (UTC)
+	// this Sandbox object (i.e. this LifecycleID) was constructed, set once
+	// from time.Now().UTC() in CreateSandbox/ResumeSandbox before the
+	// sandbox is registered in the network map. Unlike Metadata.startedAt
+	// (which is caller-seeded, e.g. from the API request or, across a
+	// checkpoint, the previous lifecycle's Sandbox), LifecycleStartedAt
+	// never inherits a value from a caller or a prior lifecycle, so it is
+	// safe to use as a lower bound for "this lifecycle's earliest legitimate
+	// event time" - e.g. to detect and correct envd log records still
+	// carrying the pre-resume guest clock (see
+	// hyperloopserver/handlers/logs.go's correctStaleTimestamp).
+	LifecycleStartedAt time.Time
+
 	config  cfg.BuilderConfig
 	files   *storage.SandboxFiles
 	cleanup *Cleanup
@@ -599,7 +612,8 @@ func (f *Factory) CreateSandbox(
 	}
 
 	sbx := &Sandbox{
-		LifecycleID: lifecycleID,
+		LifecycleID:        lifecycleID,
+		LifecycleStartedAt: time.Now().UTC(),
 
 		Resources:    resources,
 		Metadata:     metadata,
@@ -1010,7 +1024,8 @@ func (f *Factory) ResumeSandbox(
 	}
 
 	sbx := &Sandbox{
-		LifecycleID: lifecycleID,
+		LifecycleID:        lifecycleID,
+		LifecycleStartedAt: time.Now().UTC(),
 
 		Resources:    resources,
 		Metadata:     metadata,
