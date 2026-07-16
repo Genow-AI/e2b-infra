@@ -230,6 +230,13 @@ func GetFreeSpace(ctx context.Context, rootfsPath string, blockSize int64) (int6
 }
 
 func CheckIntegrity(ctx context.Context, rootfsPath string, fix bool) (string, error) {
+	// e2fsck reads the whole filesystem metadata (and lazily fetches the backing
+	// rootfs chunks), so it usually dominates the resize-disk phase wall time.
+	ctx, span := tracer.Start(ctx, "e2fsck", trace.WithAttributes(
+		attribute.Bool("filesystem.e2fsck.fix", fix),
+	))
+	defer span.End()
+
 	LogMetadata(ctx, rootfsPath)
 	accExitCode := 0
 	args := "-nfv"
@@ -242,6 +249,9 @@ func CheckIntegrity(ctx context.Context, rootfsPath string, fix bool) (string, e
 	}
 	cmd := exec.CommandContext(ctx, "e2fsck", args, rootfsPath)
 	out, err := cmd.CombinedOutput()
+	if cmd.ProcessState != nil {
+		span.SetAttributes(attribute.Int("filesystem.e2fsck.exit_code", cmd.ProcessState.ExitCode()))
+	}
 	if err != nil {
 		exitCode := cmd.ProcessState.ExitCode()
 
@@ -258,6 +268,9 @@ func CheckIntegrity(ctx context.Context, rootfsPath string, fix bool) (string, e
 // them uncheckpointed, while debugfs reads raw free-block metadata without
 // replaying the journal. Replaying first reflects the latest durable state.
 func ReplayJournal(ctx context.Context, rootfsPath string) (string, error) {
+	ctx, span := tracer.Start(ctx, "replay-journal")
+	defer span.End()
+
 	cmd := exec.CommandContext(ctx, "e2fsck", "-p", "-E", "journal_only", rootfsPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
