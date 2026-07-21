@@ -15,7 +15,8 @@
 
 variable "sql_instance_name" {
   type        = string
-  description = "Existing Cloud SQL instance that hosts the e2b database (reused, not created here)."
+  default     = "gcp-infrastructure-genow-euw3-sql-0000"
+  description = "Existing Cloud SQL instance that hosts the e2b database (reused, not created here). Has a default so `make init` (which doesn't pass -var-file) can resolve it."
 }
 
 data "google_sql_database_instance" "e2b" {
