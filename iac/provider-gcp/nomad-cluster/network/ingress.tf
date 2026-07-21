@@ -1,23 +1,5 @@
 locals {
   subdomains = ["grpc-api", "dashboard-api"]
-
-  ingress_zones = toset([for info in local.domain_info : info.root_domain])
-
-  // Create matrix for each domain and subdomain combination.
-  // record_name combines the subdomain with the domain prefix so the DNS record
-  // is created under the correct Cloudflare zone.
-  // e.g. domain "sub.example.com", subdomain "dashboard-api"
-  //      -> record_name = "dashboard-api.sub" in zone "example.com"
-  //      -> FQDN: dashboard-api.sub.example.com
-  routing_matrix = {
-    for p in setproduct(local.domains, local.subdomains) :
-    "${p[0]}|${p[1]}" => {
-      domain      = p[0]
-      subdomain   = p[1]
-      root_domain = local.domain_info[p[0]].root_domain
-      record_name = join(".", compact([p[1], local.domain_info[p[0]].prefix]))
-    }
-  }
 }
 
 resource "google_compute_health_check" "ingress" {
@@ -132,17 +114,13 @@ resource "google_compute_target_https_proxy" "ingress" {
   certificate_map = "//certificatemanager.googleapis.com/${google_certificate_manager_certificate_map.certificate_map.id}"
 }
 
-data "cloudflare_zone" "zone" {
-  for_each = local.ingress_zones
-  name     = each.value
-}
-
-resource "cloudflare_record" "records" {
-  for_each = local.routing_matrix
-
-  zone_id = data.cloudflare_zone.zone[each.value.root_domain].id
-  name    = each.value.record_name
-  content = google_compute_global_forwarding_rule.ingress.ip_address
-  type    = "A"
-  comment = var.gcp_project_id
+# grpc-api / dashboard-api A records -> ingress load balancer.
+# More specific than the wildcard, so they take precedence for these hosts.
+resource "google_dns_record_set" "ingress" {
+  for_each     = toset(local.subdomains) # ["grpc-api", "dashboard-api"]
+  managed_zone = data.google_dns_managed_zone.zone.name
+  name         = "${each.value}.${var.domain_name}."
+  type         = "A"
+  ttl          = 300
+  rrdatas      = [google_compute_global_forwarding_rule.ingress.ip_address]
 }

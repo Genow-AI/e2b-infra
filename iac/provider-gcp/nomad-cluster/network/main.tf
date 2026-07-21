@@ -1,41 +1,8 @@
-terraform {
-  required_providers {
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "4.52.5"
-    }
-  }
-}
-
-data "google_secret_manager_secret_version" "cloudflare_api_token" {
-  secret = var.cloudflare_api_token_secret_name
-}
-
-provider "cloudflare" {
-  api_token = data.google_secret_manager_secret_version.cloudflare_api_token.secret_data
-}
-
 locals {
+  // Additional (non-primary) domains, keyed by a hyphenated name for use as
+  // resource keys. Drives the per-domain Certificate Manager resources below.
+  // Empty by default (routing-domains secret defaults to []).
   domain_map = { for d in var.additional_domains : replace(d, ".", "-") => d }
-
-  // All domains (primary + additional)
-  domains = toset(concat(var.additional_domains, [var.domain_name]))
-
-  // Extract root domain (Cloudflare zone) and prefix from each domain.
-  // e.g. "sub.example.com" -> root_domain = "example.com", prefix = "sub"
-  //      "example.dev"     -> root_domain = "example.dev", prefix = ""
-  domain_parts = { for d in local.domains : d => split(".", d) }
-  domain_info = {
-    for d, parts in local.domain_parts : d => {
-      root_domain = length(parts) >= 2 ? join(".", slice(parts, length(parts) - 2, length(parts))) : d
-      prefix      = join(".", slice(parts, 0, max(length(parts) - 2, 0)))
-    }
-  }
-
-  // Primary domain parsing
-  is_subdomain = local.domain_info[var.domain_name].prefix != ""
-  subdomain    = local.domain_info[var.domain_name].prefix
-  root_domain  = local.domain_info[var.domain_name].root_domain
 
   backends = {
     session = {
@@ -107,54 +74,36 @@ locals {
   health_checked_backends = { for backend_index, backend_value in local.backends : backend_index => backend_value }
 }
 
-# ======== CLOUDFLARE ====================
+# ======== CLOUD DNS ========
 
-data "cloudflare_zone" "domain" {
-  name = local.root_domain
+# Delegated managed zone, pre-created out-of-band (see plan Task 4) and named
+# after the domain with dots replaced by hyphens, e.g. "sandbox-genow-cloud"
+# for domain_name = "sandbox.genow.cloud".
+data "google_dns_managed_zone" "zone" {
+  name = replace(var.domain_name, ".", "-")
 }
 
-resource "cloudflare_record" "dns_auth" {
-  zone_id = data.cloudflare_zone.domain.id
-  name    = google_certificate_manager_dns_authorization.dns_auth.dns_resource_record[0].name
-  value   = google_certificate_manager_dns_authorization.dns_auth.dns_resource_record[0].data
-  type    = google_certificate_manager_dns_authorization.dns_auth.dns_resource_record[0].type
-  ttl     = 3600
+# Certificate Manager DNS-authorization record: proves domain ownership so the
+# managed wildcard cert can be issued. Name/type/data are provided by GCP.
+resource "google_dns_record_set" "dns_auth" {
+  managed_zone = data.google_dns_managed_zone.zone.name
+  name         = google_certificate_manager_dns_authorization.dns_auth.dns_resource_record[0].name
+  type         = google_certificate_manager_dns_authorization.dns_auth.dns_resource_record[0].type
+  ttl          = 3600
+  rrdatas      = [google_certificate_manager_dns_authorization.dns_auth.dns_resource_record[0].data]
 }
 
-resource "cloudflare_record" "a_star" {
-  zone_id = data.cloudflare_zone.domain.id
-  name    = local.is_subdomain ? "*.${local.subdomain}" : "*"
-  value   = google_compute_global_forwarding_rule.https.ip_address
-  type    = "A"
-  comment = var.gcp_project_id
+# Wildcard A record -> main HTTPS load balancer. Covers api.<domain>,
+# docker.<domain>, nomad.<domain>, and every <sandbox>.<domain> host.
+resource "google_dns_record_set" "a_star" {
+  managed_zone = data.google_dns_managed_zone.zone.name
+  name         = "*.${var.domain_name}."
+  type         = "A"
+  ttl          = 300
+  rrdatas      = [google_compute_global_forwarding_rule.https.ip_address]
 }
 
-data "cloudflare_zone" "domains_additional" {
-  for_each = local.domain_map
-  name     = each.value
-}
-
-
-resource "cloudflare_record" "dns_auth_additional" {
-  for_each = local.domain_map
-  zone_id  = data.cloudflare_zone.domains_additional[each.key].id
-  name     = google_certificate_manager_dns_authorization.dns_auth_additional[each.key].dns_resource_record[0].name
-  value    = google_certificate_manager_dns_authorization.dns_auth_additional[each.key].dns_resource_record[0].data
-  type     = google_certificate_manager_dns_authorization.dns_auth_additional[each.key].dns_resource_record[0].type
-  ttl      = 3600
-}
-
-
-resource "cloudflare_record" "a_star_additional" {
-  for_each = local.domain_map
-  zone_id  = data.cloudflare_zone.domains_additional[each.key].id
-  name     = "*"
-  value    = google_compute_global_forwarding_rule.https.ip_address
-  type     = "A"
-  comment  = var.gcp_project_id
-}
-
-# =======================================
+# =================================================
 
 # Certificate
 resource "google_certificate_manager_dns_authorization" "dns_auth" {

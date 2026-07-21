@@ -46,10 +46,6 @@ output "core_repository_name" {
   value = google_artifact_registry_repository.core.name
 }
 
-output "cloudflare_api_token_secret_name" {
-  value = google_secret_manager_secret.cloudflare_api_token.name
-}
-
 output "notification_email_secret_version" {
   value = google_secret_manager_secret_version.notification_email_value
 }
