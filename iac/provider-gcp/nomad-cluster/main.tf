@@ -102,6 +102,7 @@ module "network" {
   environment = var.environment
 
   dns_project_id = var.dns_project_id
+  dns_zone_name  = var.dns_zone_name
 
   gcp_project_id = var.gcp_project_id
   gcp_region     = var.gcp_region
@@ -166,6 +167,7 @@ module "build_cluster" {
   cluster_name              = "${var.prefix}${var.build_cluster_name}-${each.key}"
   image_family              = var.build_image_family
   network_name              = var.network_name
+  subnetwork                = var.subnetwork
   base_hugepages_percentage = coalesce((each.value.hugepages_percentage), local.build_base_hugepages_percentage)
   network_interface_type    = each.value.network_interface_type
   node_labels               = each.value.node_labels
@@ -225,6 +227,7 @@ module "client_cluster" {
   cluster_name              = each.key == "default" ? "${var.prefix}${var.client_cluster_name}" : "${var.prefix}${var.client_cluster_name}-${each.key}"
   image_family              = var.client_image_family
   network_name              = var.network_name
+  subnetwork                = var.subnetwork
   base_hugepages_percentage = coalesce((each.value.hugepages_percentage), local.client_base_hugepages_percentage)
   network_interface_type    = each.value.network_interface_type
   node_labels               = each.value.node_labels

@@ -16,6 +16,11 @@ variable "dns_project_id" {
   description = "Project that owns the Cloud DNS managed zone (all Genow DNS lives in development-root)."
 }
 
+variable "dns_zone_name" {
+  type        = string
+  description = "Name of the existing Cloud DNS managed zone that holds the e2b records (e.g. genow-cloud)."
+}
+
 variable "additional_domains" {
   type = list(string)
 }

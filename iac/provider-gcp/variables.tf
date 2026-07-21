@@ -412,6 +412,12 @@ variable "dns_project_id" {
   default     = "development-root"
 }
 
+variable "dns_zone_name" {
+  type        = string
+  description = "Name of the existing Cloud DNS managed zone that holds the e2b records."
+  default     = "genow-cloud"
+}
+
 variable "prefix" {
   type        = string
   description = "The prefix to use for all resources in this module"
@@ -765,6 +771,12 @@ variable "default_persistent_volume_type" {
 variable "network_name" {
   type    = string
   default = "default"
+}
+
+variable "subnetwork" {
+  type        = string
+  default     = ""
+  description = "Subnetwork for cluster nodes. Required for custom-mode VPCs (e.g. the genow VPC); leave empty for auto-mode networks."
 }
 
 variable "volume_token_issuer" {

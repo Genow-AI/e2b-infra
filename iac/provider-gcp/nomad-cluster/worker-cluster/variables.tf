@@ -86,6 +86,12 @@ variable "network_name" {
   type        = string
 }
 
+variable "subnetwork" {
+  description = "Subnetwork for cluster nodes. Required for custom-mode VPCs; empty for auto-mode networks."
+  type        = string
+  default     = ""
+}
+
 variable "cluster_tag_name" {
   description = "Network tag applied to cluster instances for firewall rules"
   type        = string

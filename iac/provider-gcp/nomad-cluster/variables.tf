@@ -190,6 +190,12 @@ variable "network_name" {
   type = string
 }
 
+variable "subnetwork" {
+  type        = string
+  default     = ""
+  description = "Subnetwork for cluster nodes. Required for custom-mode VPCs; empty for auto-mode networks."
+}
+
 variable "google_service_account_email" {
   type = string
 }
@@ -210,6 +216,11 @@ variable "domain_name" {
 variable "dns_project_id" {
   type        = string
   description = "Project that owns the Cloud DNS managed zone (all Genow DNS lives in development-root)."
+}
+
+variable "dns_zone_name" {
+  type        = string
+  description = "Name of the existing Cloud DNS managed zone that holds the e2b records (e.g. genow-cloud)."
 }
 
 variable "additional_domains" {

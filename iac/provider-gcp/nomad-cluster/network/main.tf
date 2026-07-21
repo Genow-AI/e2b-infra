@@ -76,11 +76,11 @@ locals {
 
 # ======== CLOUD DNS ========
 
-# Delegated managed zone, pre-created out-of-band (see plan Task 6) in the
-# development-root DNS project, named after the domain with dots replaced by
-# hyphens, e.g. "e2b-sandbox-genow-cloud" for "e2b-sandbox.genow.cloud".
+# Existing Cloud DNS zone in the development-root project (all Genow DNS is
+# managed there). Records for the e2b subdomain (e.g. *.e2b-sandbox.genow.cloud)
+# are written directly into this parent zone — no dedicated sub-zone/delegation.
 data "google_dns_managed_zone" "zone" {
-  name    = replace(var.domain_name, ".", "-")
+  name    = var.dns_zone_name
   project = var.dns_project_id
 }
 
