@@ -773,12 +773,6 @@ variable "network_name" {
   default = "default"
 }
 
-variable "subnetwork" {
-  type        = string
-  default     = ""
-  description = "Subnetwork for cluster nodes. Required for custom-mode VPCs (e.g. the genow VPC); leave empty for auto-mode networks."
-}
-
 variable "volume_token_issuer" {
   type    = string
   default = ""

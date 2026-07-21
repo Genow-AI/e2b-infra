@@ -272,7 +272,7 @@ module "cluster" {
   gcp_zone                   = var.gcp_zone
   google_service_account_key = module.init.google_service_account_key
   network_name               = var.network_name
-  subnetwork                 = var.subnetwork
+  subnetwork                 = google_compute_subnetwork.e2b_nodes.name
   dns_project_id             = var.dns_project_id
   dns_zone_name              = var.dns_zone_name
 
