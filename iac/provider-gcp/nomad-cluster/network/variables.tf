@@ -11,6 +11,11 @@ variable "domain_name" {
   type = string
 }
 
+variable "dns_project_id" {
+  type        = string
+  description = "Project that owns the Cloud DNS managed zone (all Genow DNS lives in development-root)."
+}
+
 variable "additional_domains" {
   type = list(string)
 }

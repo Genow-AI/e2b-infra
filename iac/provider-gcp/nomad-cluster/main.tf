@@ -101,6 +101,8 @@ module "network" {
 
   environment = var.environment
 
+  dns_project_id = var.dns_project_id
+
   gcp_project_id = var.gcp_project_id
   gcp_region     = var.gcp_region
 

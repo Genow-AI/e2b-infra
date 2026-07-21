@@ -76,16 +76,18 @@ locals {
 
 # ======== CLOUD DNS ========
 
-# Delegated managed zone, pre-created out-of-band (see plan Task 4) and named
-# after the domain with dots replaced by hyphens, e.g. "sandbox-genow-cloud"
-# for domain_name = "sandbox.genow.cloud".
+# Delegated managed zone, pre-created out-of-band (see plan Task 6) in the
+# development-root DNS project, named after the domain with dots replaced by
+# hyphens, e.g. "e2b-sandbox-genow-cloud" for "e2b-sandbox.genow.cloud".
 data "google_dns_managed_zone" "zone" {
-  name = replace(var.domain_name, ".", "-")
+  name    = replace(var.domain_name, ".", "-")
+  project = var.dns_project_id
 }
 
 # Certificate Manager DNS-authorization record: proves domain ownership so the
 # managed wildcard cert can be issued. Name/type/data are provided by GCP.
 resource "google_dns_record_set" "dns_auth" {
+  project      = var.dns_project_id
   managed_zone = data.google_dns_managed_zone.zone.name
   name         = google_certificate_manager_dns_authorization.dns_auth.dns_resource_record[0].name
   type         = google_certificate_manager_dns_authorization.dns_auth.dns_resource_record[0].type
@@ -96,6 +98,7 @@ resource "google_dns_record_set" "dns_auth" {
 # Wildcard A record -> main HTTPS load balancer. Covers api.<domain>,
 # docker.<domain>, nomad.<domain>, and every <sandbox>.<domain> host.
 resource "google_dns_record_set" "a_star" {
+  project      = var.dns_project_id
   managed_zone = data.google_dns_managed_zone.zone.name
   name         = "*.${var.domain_name}."
   type         = "A"

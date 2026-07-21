@@ -118,6 +118,7 @@ resource "google_compute_target_https_proxy" "ingress" {
 # More specific than the wildcard, so they take precedence for these hosts.
 resource "google_dns_record_set" "ingress" {
   for_each     = toset(local.subdomains) # ["grpc-api", "dashboard-api"]
+  project      = var.dns_project_id
   managed_zone = data.google_dns_managed_zone.zone.name
   name         = "${each.value}.${var.domain_name}."
   type         = "A"

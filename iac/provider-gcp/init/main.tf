@@ -62,14 +62,10 @@ resource "google_project_service" "filestore_api" {
   disable_on_destroy = false
 }
 
-# Enable Cloud DNS API (required by the Cloud DNS records in nomad-cluster/network)
-resource "google_project_service" "dns_api" {
-  service = "dns.googleapis.com"
-
-  disable_on_destroy = false
-}
-
-# Enable IAM API (service account creation in this module)
+# Enable IAM API (service account creation in this module).
+# NOTE: Cloud DNS is NOT enabled here — all DNS lives in the development-root
+# project (see the network module's dns_project_id), so this project performs
+# no DNS operations.
 resource "google_project_service" "iam_api" {
   service = "iam.googleapis.com"
 

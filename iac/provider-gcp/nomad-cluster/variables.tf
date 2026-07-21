@@ -207,6 +207,11 @@ variable "domain_name" {
   description = "The domain name where e2b will run"
 }
 
+variable "dns_project_id" {
+  type        = string
+  description = "Project that owns the Cloud DNS managed zone (all Genow DNS lives in development-root)."
+}
+
 variable "additional_domains" {
   type        = list(string)
   description = "Additional domains which can be used to access the e2b cluster"
