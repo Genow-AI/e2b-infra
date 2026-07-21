@@ -12,6 +12,15 @@ set -euo pipefail
 # Extract arguments from the input into shell variables.
 eval "$(jq -r '@sh "ADDR=\(.nomad_addr) TOKEN=\(.nomad_token) JOB=\(.job_name) MIN=\(.min_count)"')"
 
+# Teardown escape hatch: `terraform destroy` still evaluates this data source, but
+# Nomad is unreachable while the cluster is being destroyed, which aborts the whole
+# destroy. Set SKIP_NOMAD_JOB_COUNT=1 to skip the query and fall back to min_count.
+# (Apply-time safety is preserved — this only triggers when explicitly opted in.)
+if [ -n "${SKIP_NOMAD_JOB_COUNT:-}" ]; then
+  jq -n --arg count "$MIN" '{"count":$count}'
+  exit 0
+fi
+
 # Fetch job info and capture HTTP status code
 RESPONSE=$(curl -s -w "\n---HTTP_STATUS:%{http_code}" -H "X-Nomad-Token: $TOKEN" \
   "$ADDR/v1/job/$JOB" 2>&1)
