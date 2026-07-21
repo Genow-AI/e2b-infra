@@ -62,6 +62,20 @@ resource "google_project_service" "filestore_api" {
   disable_on_destroy = false
 }
 
+# Enable Cloud DNS API (required by the Cloud DNS records in nomad-cluster/network)
+resource "google_project_service" "dns_api" {
+  service = "dns.googleapis.com"
+
+  disable_on_destroy = false
+}
+
+# Enable IAM API (service account creation in this module)
+resource "google_project_service" "iam_api" {
+  service = "iam.googleapis.com"
+
+  disable_on_destroy = false
+}
+
 resource "time_sleep" "secrets_api_wait_60_seconds" {
   depends_on = [google_project_service.secrets_manager_api]
 
