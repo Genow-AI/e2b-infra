@@ -70,8 +70,13 @@ mkdir -p /orchestrator/template
 mkdir -p /orchestrator/build
 
 # Add swapfile
+# NOTE (PoC/BYOC): reduced from the upstream hardcoded 100G. The swapfile lives on
+# the boot disk, so 100G required a >130G boot disk; on these small hello-world hosts
+# (n1-standard-4, 15G RAM) a 100G swapfile just fails `fallocate` with ENOSPC on the
+# trimmed boot disk and — under `set -euo pipefail` — kills this script before Consul/
+# Nomad ever start, so the node never joins. 16G is ample for one sandbox / one build.
 SWAPFILE="/swapfile"
-fallocate -l 100G $SWAPFILE
+fallocate -l 16G $SWAPFILE
 chmod 600 $SWAPFILE
 mkswap $SWAPFILE
 swapon $SWAPFILE

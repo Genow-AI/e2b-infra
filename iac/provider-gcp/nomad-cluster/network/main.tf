@@ -539,6 +539,7 @@ resource "google_compute_firewall" "orch_firewall_egress" {
 
 # Security policy
 resource "google_compute_security_policy_rule" "api-throttling-api-key" {
+  count           = 0 # PoC: SECURITY_POLICY_CEVAL_RULES quota (20/project, shared) is exhausted; rate-limiting isn't needed for a hello-world. Set to 1 (and request a quota bump) to restore for prod.
   security_policy = google_compute_security_policy.default["api"].name
   action          = "throttle"
   priority        = "300"
@@ -568,6 +569,7 @@ resource "google_compute_security_policy_rule" "api-throttling-api-key" {
 
 
 resource "google_compute_security_policy_rule" "api-throttling-ip" {
+  count           = 0 # PoC: disabled to fit the CEVAL rule quota (see api-throttling-api-key). Restore =1 for prod.
   security_policy = google_compute_security_policy.default["api"].name
   action          = "throttle"
   priority        = "500"
@@ -598,6 +600,7 @@ resource "google_compute_security_policy_rule" "api-throttling-ip" {
 }
 
 resource "google_compute_security_policy_rule" "sandbox-throttling-host" {
+  count           = 0 # PoC: disabled to fit the CEVAL rule quota (see api-throttling-api-key). Restore =1 for prod.
   security_policy = google_compute_security_policy.default["session"].name
   description     = "WS envd connection requests per sandbox"
 
@@ -626,6 +629,7 @@ resource "google_compute_security_policy_rule" "sandbox-throttling-host" {
 }
 
 resource "google_compute_security_policy_rule" "sandbox-routing-headers-log" {
+  count           = 0 # PoC: disabled to fit the CEVAL rule quota (see api-throttling-api-key). Restore =1 for prod.
   security_policy = google_compute_security_policy.default["session"].name
   description     = "Log sandbox routing headers"
 
@@ -660,6 +664,7 @@ resource "google_compute_security_policy_rule" "sandbox-routing-headers-log" {
 }
 
 resource "google_compute_security_policy_rule" "sandbox-throttling-ip" {
+  count           = 0 # PoC: disabled to fit the CEVAL rule quota (see api-throttling-api-key). Restore =1 for prod.
   security_policy = google_compute_security_policy.default["session"].name
   action          = "throttle"
   priority        = "500"

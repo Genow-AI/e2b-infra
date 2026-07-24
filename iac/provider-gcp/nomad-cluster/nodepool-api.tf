@@ -129,7 +129,7 @@ resource "google_compute_instance_template" "api" {
   disk {
     boot         = true
     source_image = data.google_compute_image.api_source_image.id
-    disk_size_gb = 200
+    disk_size_gb = 30 # was 200 — the API node only holds a few small container images (PoC)
     disk_type    = var.api_boot_disk_type
   }
 
