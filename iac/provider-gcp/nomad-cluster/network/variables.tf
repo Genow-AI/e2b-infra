@@ -11,6 +11,16 @@ variable "domain_name" {
   type = string
 }
 
+variable "dns_project_id" {
+  type        = string
+  description = "Project that owns the Cloud DNS managed zone (all Genow DNS lives in development-root)."
+}
+
+variable "dns_zone_name" {
+  type        = string
+  description = "Name of the existing Cloud DNS managed zone that holds the e2b records (e.g. genow-cloud)."
+}
+
 variable "additional_domains" {
   type = list(string)
 }
@@ -41,10 +51,6 @@ variable "api_nat_ips" {
 
 variable "api_nat_min_ports_per_vm" {
   type = number
-}
-
-variable "cloudflare_api_token_secret_name" {
-  type = string
 }
 
 variable "api_port" {

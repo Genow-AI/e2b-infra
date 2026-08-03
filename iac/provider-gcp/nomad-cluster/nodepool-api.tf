@@ -129,12 +129,13 @@ resource "google_compute_instance_template" "api" {
   disk {
     boot         = true
     source_image = data.google_compute_image.api_source_image.id
-    disk_size_gb = 200
+    disk_size_gb = 30 # was 200 — the API node only holds a few small container images (PoC)
     disk_type    = var.api_boot_disk_type
   }
 
   network_interface {
-    network = var.network_name
+    network    = var.network_name
+    subnetwork = var.subnetwork != "" ? var.subnetwork : null
 
     dynamic "access_config" {
       for_each = var.api_use_nat ? [] : ["public_ip"]

@@ -1,0 +1,9 @@
+{
+  "name": "e2b-hello",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "e2b": "latest",
+    "dotenv": "latest"
+  }
+}

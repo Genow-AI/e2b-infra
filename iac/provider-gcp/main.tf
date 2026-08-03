@@ -16,11 +16,6 @@ terraform {
       version = "6.50.0"
     }
 
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "4.52.5"
-    }
-
     nomad = {
       source  = "hashicorp/nomad"
       version = "2.1.0"
@@ -272,12 +267,14 @@ module "cluster" {
 
   environment = var.environment
 
-  cloudflare_api_token_secret_name = module.init.cloudflare_api_token_secret_name
-  gcp_project_id                   = var.gcp_project_id
-  gcp_region                       = var.gcp_region
-  gcp_zone                         = var.gcp_zone
-  google_service_account_key       = module.init.google_service_account_key
-  network_name                     = var.network_name
+  gcp_project_id             = var.gcp_project_id
+  gcp_region                 = var.gcp_region
+  gcp_zone                   = var.gcp_zone
+  google_service_account_key = module.init.google_service_account_key
+  network_name               = var.network_name
+  subnetwork                 = google_compute_subnetwork.e2b_nodes.name
+  dns_project_id             = var.dns_project_id
+  dns_zone_name              = var.dns_zone_name
 
   build_clusters_config  = var.build_clusters_config
   client_clusters_config = var.client_clusters_config

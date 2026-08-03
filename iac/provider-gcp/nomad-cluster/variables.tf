@@ -190,6 +190,12 @@ variable "network_name" {
   type = string
 }
 
+variable "subnetwork" {
+  type        = string
+  default     = ""
+  description = "Subnetwork for cluster nodes. Required for custom-mode VPCs; empty for auto-mode networks."
+}
+
 variable "google_service_account_email" {
   type = string
 }
@@ -205,6 +211,16 @@ variable "docker_contexts_bucket_name" {
 variable "domain_name" {
   type        = string
   description = "The domain name where e2b will run"
+}
+
+variable "dns_project_id" {
+  type        = string
+  description = "Project that owns the Cloud DNS managed zone (all Genow DNS lives in development-root)."
+}
+
+variable "dns_zone_name" {
+  type        = string
+  description = "Name of the existing Cloud DNS managed zone that holds the e2b records (e.g. genow-cloud)."
 }
 
 variable "additional_domains" {
@@ -285,10 +301,6 @@ variable "clickhouse_health_port" {
 variable "filestore_cache_enabled" {
   type    = bool
   default = false
-}
-
-variable "cloudflare_api_token_secret_name" {
-  type = string
 }
 
 variable "filestore_cache_tier" {

@@ -62,6 +62,24 @@ resource "google_project_service" "filestore_api" {
   disable_on_destroy = false
 }
 
+# Enable IAM API (service account creation in this module).
+# NOTE: Cloud DNS is NOT enabled here — all DNS lives in the development-root
+# project (see the network module's dns_project_id), so this project performs
+# no DNS operations.
+resource "google_project_service" "iam_api" {
+  service = "iam.googleapis.com"
+
+  disable_on_destroy = false
+}
+
+# Enable Cloud SQL Admin API (database.tf creates the e2b db + user on the
+# existing Cloud SQL instance).
+resource "google_project_service" "sqladmin_api" {
+  service = "sqladmin.googleapis.com"
+
+  disable_on_destroy = false
+}
+
 resource "time_sleep" "secrets_api_wait_60_seconds" {
   depends_on = [google_project_service.secrets_manager_api]
 

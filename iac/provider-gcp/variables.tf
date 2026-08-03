@@ -406,6 +406,18 @@ variable "domain_name" {
   description = "The domain name where e2b will run"
 }
 
+variable "dns_project_id" {
+  type        = string
+  description = "GCP project that owns the Cloud DNS managed zone. All Genow DNS is managed in development-root."
+  default     = "development-root"
+}
+
+variable "dns_zone_name" {
+  type        = string
+  description = "Name of the existing Cloud DNS managed zone that holds the e2b records."
+  default     = "genow-cloud"
+}
+
 variable "prefix" {
   type        = string
   description = "The prefix to use for all resources in this module"

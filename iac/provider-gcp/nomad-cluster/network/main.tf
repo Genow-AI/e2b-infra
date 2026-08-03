@@ -1,41 +1,8 @@
-terraform {
-  required_providers {
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "4.52.5"
-    }
-  }
-}
-
-data "google_secret_manager_secret_version" "cloudflare_api_token" {
-  secret = var.cloudflare_api_token_secret_name
-}
-
-provider "cloudflare" {
-  api_token = data.google_secret_manager_secret_version.cloudflare_api_token.secret_data
-}
-
 locals {
+  // Additional (non-primary) domains, keyed by a hyphenated name for use as
+  // resource keys. Drives the per-domain Certificate Manager resources below.
+  // Empty by default (routing-domains secret defaults to []).
   domain_map = { for d in var.additional_domains : replace(d, ".", "-") => d }
-
-  // All domains (primary + additional)
-  domains = toset(concat(var.additional_domains, [var.domain_name]))
-
-  // Extract root domain (Cloudflare zone) and prefix from each domain.
-  // e.g. "sub.example.com" -> root_domain = "example.com", prefix = "sub"
-  //      "example.dev"     -> root_domain = "example.dev", prefix = ""
-  domain_parts = { for d in local.domains : d => split(".", d) }
-  domain_info = {
-    for d, parts in local.domain_parts : d => {
-      root_domain = length(parts) >= 2 ? join(".", slice(parts, length(parts) - 2, length(parts))) : d
-      prefix      = join(".", slice(parts, 0, max(length(parts) - 2, 0)))
-    }
-  }
-
-  // Primary domain parsing
-  is_subdomain = local.domain_info[var.domain_name].prefix != ""
-  subdomain    = local.domain_info[var.domain_name].prefix
-  root_domain  = local.domain_info[var.domain_name].root_domain
 
   backends = {
     session = {
@@ -107,54 +74,7 @@ locals {
   health_checked_backends = { for backend_index, backend_value in local.backends : backend_index => backend_value }
 }
 
-# ======== CLOUDFLARE ====================
-
-data "cloudflare_zone" "domain" {
-  name = local.root_domain
-}
-
-resource "cloudflare_record" "dns_auth" {
-  zone_id = data.cloudflare_zone.domain.id
-  name    = google_certificate_manager_dns_authorization.dns_auth.dns_resource_record[0].name
-  value   = google_certificate_manager_dns_authorization.dns_auth.dns_resource_record[0].data
-  type    = google_certificate_manager_dns_authorization.dns_auth.dns_resource_record[0].type
-  ttl     = 3600
-}
-
-resource "cloudflare_record" "a_star" {
-  zone_id = data.cloudflare_zone.domain.id
-  name    = local.is_subdomain ? "*.${local.subdomain}" : "*"
-  value   = google_compute_global_forwarding_rule.https.ip_address
-  type    = "A"
-  comment = var.gcp_project_id
-}
-
-data "cloudflare_zone" "domains_additional" {
-  for_each = local.domain_map
-  name     = each.value
-}
-
-
-resource "cloudflare_record" "dns_auth_additional" {
-  for_each = local.domain_map
-  zone_id  = data.cloudflare_zone.domains_additional[each.key].id
-  name     = google_certificate_manager_dns_authorization.dns_auth_additional[each.key].dns_resource_record[0].name
-  value    = google_certificate_manager_dns_authorization.dns_auth_additional[each.key].dns_resource_record[0].data
-  type     = google_certificate_manager_dns_authorization.dns_auth_additional[each.key].dns_resource_record[0].type
-  ttl      = 3600
-}
-
-
-resource "cloudflare_record" "a_star_additional" {
-  for_each = local.domain_map
-  zone_id  = data.cloudflare_zone.domains_additional[each.key].id
-  name     = "*"
-  value    = google_compute_global_forwarding_rule.https.ip_address
-  type     = "A"
-  comment  = var.gcp_project_id
-}
-
-# =======================================
+# All Cloud DNS records for this module live in dns.tf.
 
 # Certificate
 resource "google_certificate_manager_dns_authorization" "dns_auth" {
@@ -587,6 +507,7 @@ resource "google_compute_firewall" "orch_firewall_egress" {
 
 # Security policy
 resource "google_compute_security_policy_rule" "api-throttling-api-key" {
+  count           = 0 # PoC: SECURITY_POLICY_CEVAL_RULES quota (20/project, shared) is exhausted; rate-limiting isn't needed for a hello-world. Set to 1 (and request a quota bump) to restore for prod.
   security_policy = google_compute_security_policy.default["api"].name
   action          = "throttle"
   priority        = "300"
@@ -616,6 +537,7 @@ resource "google_compute_security_policy_rule" "api-throttling-api-key" {
 
 
 resource "google_compute_security_policy_rule" "api-throttling-ip" {
+  count           = 0 # PoC: disabled to fit the CEVAL rule quota (see api-throttling-api-key). Restore =1 for prod.
   security_policy = google_compute_security_policy.default["api"].name
   action          = "throttle"
   priority        = "500"
@@ -646,6 +568,7 @@ resource "google_compute_security_policy_rule" "api-throttling-ip" {
 }
 
 resource "google_compute_security_policy_rule" "sandbox-throttling-host" {
+  count           = 0 # PoC: disabled to fit the CEVAL rule quota (see api-throttling-api-key). Restore =1 for prod.
   security_policy = google_compute_security_policy.default["session"].name
   description     = "WS envd connection requests per sandbox"
 
@@ -674,6 +597,7 @@ resource "google_compute_security_policy_rule" "sandbox-throttling-host" {
 }
 
 resource "google_compute_security_policy_rule" "sandbox-routing-headers-log" {
+  count           = 0 # PoC: disabled to fit the CEVAL rule quota (see api-throttling-api-key). Restore =1 for prod.
   security_policy = google_compute_security_policy.default["session"].name
   description     = "Log sandbox routing headers"
 
@@ -708,6 +632,7 @@ resource "google_compute_security_policy_rule" "sandbox-routing-headers-log" {
 }
 
 resource "google_compute_security_policy_rule" "sandbox-throttling-ip" {
+  count           = 0 # PoC: disabled to fit the CEVAL rule quota (see api-throttling-api-key). Restore =1 for prod.
   security_policy = google_compute_security_policy.default["session"].name
   action          = "throttle"
   priority        = "500"
