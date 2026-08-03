@@ -1,7 +1,3 @@
-locals {
-  subdomains = ["grpc-api", "dashboard-api"]
-}
-
 resource "google_compute_health_check" "ingress" {
   name = "${var.prefix}ingress"
 
@@ -112,16 +108,4 @@ resource "google_compute_target_https_proxy" "ingress" {
   ssl_policy = google_compute_ssl_policy.ingress.self_link
 
   certificate_map = "//certificatemanager.googleapis.com/${google_certificate_manager_certificate_map.certificate_map.id}"
-}
-
-# grpc-api / dashboard-api A records -> ingress load balancer.
-# More specific than the wildcard, so they take precedence for these hosts.
-resource "google_dns_record_set" "ingress" {
-  for_each     = toset(local.subdomains) # ["grpc-api", "dashboard-api"]
-  project      = var.dns_project_id
-  managed_zone = data.google_dns_managed_zone.zone.name
-  name         = "${each.value}.${var.domain_name}."
-  type         = "A"
-  ttl          = 300
-  rrdatas      = [google_compute_global_forwarding_rule.ingress.ip_address]
 }
