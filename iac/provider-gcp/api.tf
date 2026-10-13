@@ -1,7 +1,7 @@
 resource "google_artifact_registry_repository" "custom_environments_repository" {
   format        = "DOCKER"
   repository_id = "${var.prefix}custom-environments"
-  labels        = var.labels
+  labels        = local.labels
 }
 
 resource "google_artifact_registry_repository_iam_member" "custom_environments_repository_member" {

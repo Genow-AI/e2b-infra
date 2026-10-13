@@ -16,6 +16,13 @@ resource "google_compute_subnetwork" "e2b_nodes" {
   network                  = var.network_name
   ip_cidr_range            = var.e2b_subnet_cidr
   private_ip_google_access = true
+
+  # VPC Flow Logs (compliance: all non-proxy subnets must have them enabled).
+  log_config {
+    aggregation_interval = "INTERVAL_5_SEC"
+    flow_sampling        = 0.5
+    metadata             = "INCLUDE_ALL_METADATA"
+  }
 }
 
 # BYOC gap fix: e2b's network module (nomad-cluster/network/main.tf) only opens

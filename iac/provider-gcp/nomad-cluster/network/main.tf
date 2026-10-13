@@ -463,7 +463,7 @@ resource "google_compute_firewall" "internal_remote_connection_firewall_ingress"
   direction   = "INGRESS"
   target_tags = [var.cluster_tag_name]
   # https://googlecloudplatform.github.io/iap-desktop/setup-iap/
-  source_ranges = var.environment == "dev" ? ["0.0.0.0/0"] : ["35.235.240.0/20"]
+  source_ranges = ["35.235.240.0/20"]
 }
 
 resource "google_compute_firewall" "remote_connection_firewall_ingress" {
