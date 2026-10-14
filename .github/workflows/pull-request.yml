@@ -132,7 +132,7 @@ jobs:
     with:
       run-check: ${{ contains(fromJSON(needs.detect-changes.outputs.changed-scopes), 'generated-inputs') && needs.detect-changes.outputs.docs-only != 'true' }}
       # Only auto-commit for same-repo PRs (secrets aren't available for forks)
-      commit: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+      commit: ${{ github.event.pull_request.head.repo.full_name == github.repository && vars.AUTOFIXER_APP_ID != '' }}
     secrets:
       app_id: ${{ vars.AUTOFIXER_APP_ID }}
       app_secret: ${{ secrets.AUTOFIXER_APP_SECRET }}
