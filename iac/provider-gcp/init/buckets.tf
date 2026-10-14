@@ -21,6 +21,29 @@ resource "google_storage_bucket" "loki_storage_bucket" {
       type = "Delete"
     }
   }
+
+  # Version cleanup: keep at most one archived version, drop noncurrent versions after 7 days.
+  lifecycle_rule {
+    condition {
+      num_newer_versions = 1
+      with_state         = "ARCHIVED"
+    }
+
+    action {
+      type = "Delete"
+    }
+  }
+
+  lifecycle_rule {
+    condition {
+      days_since_noncurrent_time = 7
+      with_state                 = "ANY"
+    }
+
+    action {
+      type = "Delete"
+    }
+  }
 }
 
 # TODO: Not needed anymore, BUT! we may need it for rebuilding templates
@@ -119,6 +142,29 @@ resource "google_storage_bucket" "clickhouse_backups_bucket" {
     }
   }
 
+  # Version cleanup: keep at most one archived version, drop noncurrent versions after 30 days.
+  lifecycle_rule {
+    condition {
+      num_newer_versions = 1
+      with_state         = "ARCHIVED"
+    }
+
+    action {
+      type = "Delete"
+    }
+  }
+
+  lifecycle_rule {
+    condition {
+      days_since_noncurrent_time = 30
+      with_state                 = "ANY"
+    }
+
+    action {
+      type = "Delete"
+    }
+  }
+
   public_access_prevention    = "enforced"
   storage_class               = "NEARLINE"
   uniform_bucket_level_access = true
@@ -187,6 +233,29 @@ resource "google_storage_bucket" "fc_build_cache_bucket" {
 
   autoclass {
     enabled = true
+  }
+
+  # Version cleanup: keep at most one archived version, drop noncurrent versions after 30 days.
+  lifecycle_rule {
+    condition {
+      num_newer_versions = 1
+      with_state         = "ARCHIVED"
+    }
+
+    action {
+      type = "Delete"
+    }
+  }
+
+  lifecycle_rule {
+    condition {
+      days_since_noncurrent_time = 30
+      with_state                 = "ANY"
+    }
+
+    action {
+      type = "Delete"
+    }
   }
 
   soft_delete_policy {
