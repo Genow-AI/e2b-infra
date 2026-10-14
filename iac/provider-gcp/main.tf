@@ -45,6 +45,16 @@ data "google_secret_manager_secret_version" "routing_domains" {
 }
 
 locals {
+  // Compliance-required labels (environment, owner, project, dataclassification,
+  // application) applied to every labelled resource; var.labels can override them.
+  labels = merge({
+    environment        = var.environment
+    owner              = "platform"
+    project            = "e2b"
+    dataclassification = "confidential"
+    application        = "e2b"
+  }, var.labels)
+
   additional_domains = nonsensitive(jsondecode(data.google_secret_manager_secret_version.routing_domains.secret_data))
 
   clickhouse_username          = "e2b"
@@ -245,7 +255,7 @@ locals {
 module "init" {
   source = "./init"
 
-  labels        = var.labels
+  labels        = local.labels
   prefix        = var.prefix
   bucket_prefix = var.bucket_prefix
 
@@ -332,7 +342,7 @@ module "cluster" {
 
   persistent_volume_types = local.persistent_volume_types
 
-  labels = var.labels
+  labels = local.labels
   prefix = var.prefix
 
   # Boot disks
