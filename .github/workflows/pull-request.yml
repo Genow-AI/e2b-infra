@@ -132,7 +132,7 @@ jobs:
     with:
       run-check: ${{ contains(fromJSON(needs.detect-changes.outputs.changed-scopes), 'generated-inputs') && needs.detect-changes.outputs.docs-only != 'true' }}
       # Only auto-commit for same-repo PRs (secrets aren't available for forks)
-      commit: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+      commit: ${{ github.event.pull_request.head.repo.full_name == github.repository && vars.AUTOFIXER_APP_ID != '' }}
     secrets:
       app_id: ${{ vars.AUTOFIXER_APP_ID }}
       app_secret: ${{ secrets.AUTOFIXER_APP_SECRET }}
@@ -200,3 +200,16 @@ jobs:
           comment_mode: off
           fail_on: "errors"
           files: "artifacts/**/*.xml"
+
+  ci:
+    name: ci
+    if: always()
+    needs: [detect-changes, lint, validate-openapi, generated-code-check, out-of-order-migrations, unit-tests, terraform-validation, arm64-tests, integration-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required jobs
+        run: |
+          echo '${{ toJSON(needs) }}'
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "::error::One or more required jobs failed"; exit 1
+          fi
