@@ -1,5 +1,9 @@
 locals {
   clickhouse_pool_name = "${var.prefix}${var.clickhouse_cluster_name}"
+  # No MIG when ClickHouse is disabled (an empty MIG still fails the compliance autoscaler check).
+  # A stateful MIG (per-instance configs) can't be autoscaled, so an enabled ClickHouse pool
+  # needs a compliance exception instead.
+  clickhouse_enabled = var.clickhouse_cluster_size > 0
   clickhouse_start_script = templatefile("${path.module}/scripts/start-clickhouse.sh", {
     CLUSTER_TAG_NAME             = var.cluster_tag_name
     SCRIPTS_BUCKET               = var.cluster_setup_bucket_name
@@ -20,6 +24,8 @@ locals {
 }
 
 resource "google_compute_health_check" "clickhouse_nomad_check" {
+  count = local.clickhouse_enabled ? 1 : 0
+
   name                = "${local.clickhouse_pool_name}-nomad-check"
   check_interval_sec  = 15
   timeout_sec         = 10
@@ -37,11 +43,13 @@ resource "google_compute_health_check" "clickhouse_nomad_check" {
 }
 
 resource "google_compute_instance_group_manager" "clickhouse_pool" {
+  count = local.clickhouse_enabled ? 1 : 0
+
   name = "${local.clickhouse_pool_name}-ig"
 
   version {
-    name              = google_compute_instance_template.clickhouse.id
-    instance_template = google_compute_instance_template.clickhouse.id
+    name              = google_compute_instance_template.clickhouse[0].id
+    instance_template = google_compute_instance_template.clickhouse[0].id
   }
 
   named_port {
@@ -50,7 +58,7 @@ resource "google_compute_instance_group_manager" "clickhouse_pool" {
   }
 
   auto_healing_policies {
-    health_check      = google_compute_health_check.clickhouse_nomad_check.id
+    health_check      = google_compute_health_check.clickhouse_nomad_check[0].id
     initial_delay_sec = 600
   }
 
@@ -88,7 +96,7 @@ resource "google_compute_disk" "clickhouse_stateful_disk" {
 resource "google_compute_per_instance_config" "clickhouse_instances" {
   for_each = toset([for i in range(1, var.clickhouse_cluster_size + 1) : tostring(i)])
 
-  instance_group_manager = google_compute_instance_group_manager.clickhouse_pool.name
+  instance_group_manager = google_compute_instance_group_manager.clickhouse_pool[0].name
 
   name = "${local.clickhouse_pool_name}-${each.key}"
 
@@ -111,6 +119,8 @@ data "google_compute_image" "clickhouse_source_image" {
 }
 
 resource "google_compute_instance_template" "clickhouse" {
+  count = local.clickhouse_enabled ? 1 : 0
+
   name_prefix = "${local.clickhouse_pool_name}-"
 
   instance_description = null

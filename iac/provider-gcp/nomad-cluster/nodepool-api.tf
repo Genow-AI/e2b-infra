@@ -88,12 +88,28 @@ resource "google_compute_instance_group_manager" "api_pool" {
   }
 
   base_instance_name = local.api_pool_name
-  target_size        = var.api_cluster_size
-  target_pools       = []
+  # Sized by google_compute_autoscaler.api.
+  target_size  = null
+  target_pools = []
 
   depends_on = [
     google_compute_instance_template.api,
   ]
+}
+
+# Compliance: every MIG needs an autoscaler in mode ON or ONLY_SCALE_OUT. min == max pins the
+# pool at api_cluster_size; raise max_replicas to allow scale-out.
+resource "google_compute_autoscaler" "api" {
+  name   = "${local.api_pool_name}-autoscaler"
+  zone   = google_compute_instance_group_manager.api_pool.zone
+  target = google_compute_instance_group_manager.api_pool.id
+
+  autoscaling_policy {
+    min_replicas    = var.api_cluster_size
+    max_replicas    = var.api_cluster_size
+    cooldown_period = 240
+    mode            = "ONLY_SCALE_OUT"
+  }
 }
 
 data "google_compute_image" "api_source_image" {

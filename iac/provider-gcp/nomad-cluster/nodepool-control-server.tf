@@ -36,8 +36,9 @@ resource "google_compute_region_instance_group_manager" "server_pool" {
   name               = "${local.server_pool_name}-rig"
   base_instance_name = local.server_pool_name
 
-  target_pools                     = []
-  target_size                      = var.server_cluster_size
+  target_pools = []
+  # Sized by google_compute_region_autoscaler.server.
+  target_size                      = null
   distribution_policy_target_shape = "EVEN"
 
   version {
@@ -83,6 +84,22 @@ resource "google_compute_region_instance_group_manager" "server_pool" {
   depends_on = [
     google_compute_instance_template.server,
   ]
+}
+
+# Compliance: every MIG needs an autoscaler in mode ON or ONLY_SCALE_OUT. The servers form the
+# Consul/Nomad Raft quorum, so min == max pins the pool at server_cluster_size; it must never
+# change size on its own.
+resource "google_compute_region_autoscaler" "server" {
+  name   = "${local.server_pool_name}-autoscaler"
+  region = var.gcp_region
+  target = google_compute_region_instance_group_manager.server_pool.id
+
+  autoscaling_policy {
+    min_replicas    = var.server_cluster_size
+    max_replicas    = var.server_cluster_size
+    cooldown_period = 240
+    mode            = "ONLY_SCALE_OUT"
+  }
 }
 
 data "google_compute_image" "server_source_image" {

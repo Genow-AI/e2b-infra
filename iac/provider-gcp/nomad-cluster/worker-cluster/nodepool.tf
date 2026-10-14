@@ -49,9 +49,9 @@ resource "google_compute_health_check" "nomad_check" {
   }
 }
 
+# Always attached (compliance: every MIG needs an autoscaler in mode ON or ONLY_SCALE_OUT).
+# When size_max == cluster_size, min == max pins the pool at cluster_size.
 resource "google_compute_region_autoscaler" "autoscaler" {
-  count = try(var.autoscaler.size_max > var.cluster_size, false) ? 1 : 0
-
   name   = "${var.cluster_name}-autoscaler"
   region = var.gcp_region
   target = google_compute_region_instance_group_manager.pool.id
@@ -60,8 +60,7 @@ resource "google_compute_region_autoscaler" "autoscaler" {
     max_replicas    = try(var.autoscaler.size_max, null) != null ? var.autoscaler.size_max : var.cluster_size
     min_replicas    = var.cluster_size
     cooldown_period = 240
-    # Turn off autoscaling when the cluster size is equal to the maximum size.
-    mode = "ONLY_SCALE_OUT"
+    mode            = "ONLY_SCALE_OUT"
 
     dynamic "cpu_utilization" {
       for_each = try(var.autoscaler.cpu_target < 1, false) ? [1] : []
@@ -108,7 +107,8 @@ resource "google_compute_region_instance_group_manager" "pool" {
   name   = "${var.cluster_name}-rig"
   region = var.gcp_region
 
-  target_size = var.cluster_size == try(var.autoscaler.size_max, var.cluster_size) ? var.cluster_size : null
+  # Sized by google_compute_region_autoscaler.autoscaler.
+  target_size = null
 
   version {
     name              = google_compute_instance_template.template.id

@@ -1,5 +1,7 @@
 locals {
   loki_pool_name = "${var.prefix}orch-loki"
+  # No MIG when Loki is disabled (an empty MIG still fails the compliance autoscaler check).
+  loki_enabled = var.loki_cluster_size > 0
 
   loki_startup_script = templatefile("${path.module}/../modules/nodepool-api/scripts/start-api.sh", {
     CLUSTER_TAG_NAME             = var.cluster_tag_name
@@ -21,6 +23,8 @@ locals {
 }
 
 resource "google_compute_health_check" "loki_nomad_check" {
+  count = local.loki_enabled ? 1 : 0
+
   name                = "${local.loki_pool_name}-nomad-loki-check"
   check_interval_sec  = 15
   timeout_sec         = 10
@@ -38,16 +42,18 @@ resource "google_compute_health_check" "loki_nomad_check" {
 }
 
 resource "google_compute_instance_group_manager" "loki_pool" {
+  count = local.loki_enabled ? 1 : 0
+
   name = "${local.loki_pool_name}-ig"
 
   version {
-    name              = google_compute_instance_template.loki.id
-    instance_template = google_compute_instance_template.loki.id
+    name              = google_compute_instance_template.loki[0].id
+    instance_template = google_compute_instance_template.loki[0].id
   }
 
 
   auto_healing_policies {
-    health_check      = google_compute_health_check.loki_nomad_check.id
+    health_check      = google_compute_health_check.loki_nomad_check[0].id
     initial_delay_sec = 600
   }
 
@@ -64,12 +70,30 @@ resource "google_compute_instance_group_manager" "loki_pool" {
   }
 
   base_instance_name = local.loki_pool_name
-  target_size        = var.loki_cluster_size
-  target_pools       = []
+  # Sized by google_compute_autoscaler.loki.
+  target_size  = null
+  target_pools = []
 
   depends_on = [
     google_compute_instance_template.loki,
   ]
+}
+
+# Compliance: every MIG needs an autoscaler in mode ON or ONLY_SCALE_OUT. min == max pins the
+# pool at loki_cluster_size.
+resource "google_compute_autoscaler" "loki" {
+  count = local.loki_enabled ? 1 : 0
+
+  name   = "${local.loki_pool_name}-autoscaler"
+  zone   = google_compute_instance_group_manager.loki_pool[0].zone
+  target = google_compute_instance_group_manager.loki_pool[0].id
+
+  autoscaling_policy {
+    min_replicas    = var.loki_cluster_size
+    max_replicas    = var.loki_cluster_size
+    cooldown_period = 240
+    mode            = "ONLY_SCALE_OUT"
+  }
 }
 
 data "google_compute_image" "loki_source_image" {
@@ -77,6 +101,8 @@ data "google_compute_image" "loki_source_image" {
 }
 
 resource "google_compute_instance_template" "loki" {
+  count = local.loki_enabled ? 1 : 0
+
   name_prefix = "${local.loki_pool_name}-"
 
   instance_description = null
