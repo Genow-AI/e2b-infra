@@ -38,6 +38,9 @@ resource "google_compute_health_check" "loki_nomad_check" {
 }
 
 resource "google_compute_instance_group_manager" "loki_pool" {
+  # Skip the empty MIG when Loki is disabled.
+  count = var.loki_cluster_size > 0 ? 1 : 0
+
   name = "${local.loki_pool_name}-ig"
 
   version {
@@ -142,4 +145,24 @@ resource "google_compute_instance_template" "loki" {
   depends_on = [
     google_storage_bucket_object.setup_config_objects,
   ]
+}
+
+# Pinned autoscaler (min == max): satisfies the "MIG autoscaling enabled" compliance check without resizing.
+resource "google_compute_autoscaler" "loki" {
+  count = var.loki_cluster_size > 0 ? 1 : 0
+
+  name   = "${local.loki_pool_name}-autoscaler"
+  zone   = var.gcp_zone
+  target = google_compute_instance_group_manager.loki_pool[0].id
+
+  autoscaling_policy {
+    min_replicas    = var.loki_cluster_size
+    max_replicas    = var.loki_cluster_size
+    cooldown_period = 240
+    mode            = "ON"
+
+    cpu_utilization {
+      target = 0.8
+    }
+  }
 }

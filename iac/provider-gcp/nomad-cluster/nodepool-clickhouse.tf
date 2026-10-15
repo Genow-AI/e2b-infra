@@ -37,6 +37,9 @@ resource "google_compute_health_check" "clickhouse_nomad_check" {
 }
 
 resource "google_compute_instance_group_manager" "clickhouse_pool" {
+  # Skip the empty MIG when ClickHouse is disabled. No autoscaler: GCE does not support autoscaling stateful MIGs.
+  count = var.clickhouse_cluster_size > 0 ? 1 : 0
+
   name = "${local.clickhouse_pool_name}-ig"
 
   version {
@@ -88,7 +91,7 @@ resource "google_compute_disk" "clickhouse_stateful_disk" {
 resource "google_compute_per_instance_config" "clickhouse_instances" {
   for_each = toset([for i in range(1, var.clickhouse_cluster_size + 1) : tostring(i)])
 
-  instance_group_manager = google_compute_instance_group_manager.clickhouse_pool.name
+  instance_group_manager = google_compute_instance_group_manager.clickhouse_pool[0].name
 
   name = "${local.clickhouse_pool_name}-${each.key}"
 
