@@ -49,9 +49,9 @@ resource "google_compute_health_check" "nomad_check" {
   }
 }
 
+# Always attach an autoscaler (pinned when size_max == cluster_size) so the MIG reports autoscaling as enabled
+# (compliance check).
 resource "google_compute_region_autoscaler" "autoscaler" {
-  count = try(var.autoscaler.size_max > var.cluster_size, false) ? 1 : 0
-
   name   = "${var.cluster_name}-autoscaler"
   region = var.gcp_region
   target = google_compute_region_instance_group_manager.pool.id
@@ -248,4 +248,9 @@ resource "google_compute_instance_template" "template" {
 
     create_before_destroy = true
   }
+}
+
+moved {
+  from = google_compute_region_autoscaler.autoscaler[0]
+  to   = google_compute_region_autoscaler.autoscaler
 }
