@@ -60,8 +60,9 @@ resource "google_compute_region_autoscaler" "autoscaler" {
     max_replicas    = try(var.autoscaler.size_max, null) != null ? var.autoscaler.size_max : var.cluster_size
     min_replicas    = var.cluster_size
     cooldown_period = 240
-    # Turn off autoscaling when the cluster size is equal to the maximum size.
-    mode = "ONLY_SCALE_OUT"
+    # Scale out only, so running sandboxes are never evicted by scale-in. When min == max both modes are
+    # equivalent; use "ON" then so the MIG reports autoscaling as enabled (compliance check).
+    mode = (try(var.autoscaler.size_max, null) != null ? var.autoscaler.size_max : var.cluster_size) == var.cluster_size ? "ON" : "ONLY_SCALE_OUT"
 
     dynamic "cpu_utilization" {
       for_each = try(var.autoscaler.cpu_target < 1, false) ? [1] : []

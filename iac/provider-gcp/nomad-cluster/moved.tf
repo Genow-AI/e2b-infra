@@ -17,3 +17,13 @@ moved {
   from = google_compute_health_check.client_nomad_check
   to   = module.client_cluster["default"].google_compute_health_check.nomad_check
 }
+
+moved {
+  from = google_compute_instance_group_manager.loki_pool
+  to   = google_compute_instance_group_manager.loki_pool[0]
+}
+
+moved {
+  from = google_compute_instance_group_manager.clickhouse_pool
+  to   = google_compute_instance_group_manager.clickhouse_pool[0]
+}
